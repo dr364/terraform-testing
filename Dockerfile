@@ -1,11 +1,11 @@
-FROM golang:1.15.6-alpine3.12
+FROM golang:1.15.8-alpine3.13
 
 ENV PRE_COMMIT_TERRAFORM_VERSION v1.45.0
-ENV TERRAFORM_VERSION 0.13.5
-ENV TFLINT_VERSION v0.22.0
-ENV TERRASCAN_VERSION 1.2.0
-ENV TERRATEST_VERSION v0.31.2
-ENV TESTIFY_VERSION v1.6.1
+ENV TERRAFORM_VERSION 0.14.6
+ENV TFLINT_VERSION v0.24.1
+ENV TERRASCAN_VERSION 1.3.2
+ENV TERRATEST_VERSION v0.32.5
+ENV TESTIFY_VERSION v1.7.0
 # Terraform validate pre-commit hook requires the AWS_DEFAULT_REGION env var for initialising AWS cloud provider config
 # Without it then the validate command could fail because the AWS provider needs the region set
 ENV AWS_DEFAULT_REGION us-east-1 
@@ -15,7 +15,7 @@ ENV GOPATH /opt/workdir
 
 LABEL maintainer=dr364@github.com \
       name=terraform-testing \
-      version=0.1.2
+      version=0.1.3
 
 # Update all packages, also install Python and pre-commit
 RUN apk update && \
@@ -47,12 +47,18 @@ RUN wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform
 # Clean up temp files
 RUN rm /tmp/*
 
-# Install uncompiled go packages (Terratest and testify)
-RUN mkdir -p $GOPATH/src
+# Establish the runtime user (non-root, no sudo privileges)
+RUN addgroup -g 1000 -S terraform && \
+    adduser -u 1000 -S -D terraform -G terraform --shell /bin/bash && \
+    mkdir -p $GOPATH/src && \
+    chown -R terraform:terraform $GOPATH
+
+# Tell docker that all future commands should run as the terraform user
+USER terraform
 WORKDIR $GOPATH/src
 
 # Copy the git repo to test here, or attach a volume to $GOPATH
 
-# Initialise the go modules
+# Install go packages (Terratest and testify)
 RUN go mod download github.com/gruntwork-io/terratest@$TERRATEST_VERSION && \
     go mod download github.com/stretchr/testify@$TESTIFY_VERSION
