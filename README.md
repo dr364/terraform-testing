@@ -19,7 +19,7 @@ The Docker image uses the following open source projects -
 
 ## Prerequisites
 
-- The pipeline assumes that the Terraform defintions you are running are in a public git repository. If they are in a proviate repo, you will need to add the `private_key` to the `git` resource type. See https://github.com/concourse/git-resource for details on how to implement.
+- The pipeline assumes that the Terraform defintions you are running are in a public git repository. If they are in a private repo, you will need to add the `private_key` to the `git` resource type. See https://github.com/concourse/git-resource for details on how to implement.
 
 - The pipeline assumes that you are using Terratest to perform your unit and integration tests. To separate unit and integration tests into the appropriate pipeline stages, Terratest requires that you tag your test files with either `unit` or `integration` on the first line of the file, like so:
 
@@ -32,7 +32,7 @@ import (
     ...
 ```
 
-- The pipeline assumes that you have your tests configured in a folder called `test` a the root of your Terraform repo, similar to below:
+- The pipeline assumes that you have your tests configured in a folder called `test` at the root of your Terraform repo, similar to below:
 
 ```
 terraform-code
@@ -74,12 +74,12 @@ The Concourse pipeline runs through a number of test stages, performing quality 
 The pipeline has a number of variables you will need to declare when you submit it to Concourse:
 1) `((terraform-git-uri))` - The Git URI of the Terraform definitions you wish to test.
 2) `((terraform-branch-name))` - The branch of code you wish to track within the aforementioned Git repo.
-3) `((pre-commit-repo-version))` - The tag of `pre-commit-terraform` to use for pre-commit checks. If you are not using `pre-commit-terraform` then just place an arbitrary value here (Concourse currently doesn't support optional parameters or default values). Ensure that this aligns with the `PRE_COMMIT_TERRAFORM_VERSION in the Dockerfile.
+3) `((pre-commit-repo-version))` - The tag of `pre-commit-terraform` to use for pre-commit checks. If you are not using `pre-commit-terraform` then just place an arbitrary value here (Concourse currently doesn't support optional parameters or default values). Ensure that this aligns with the `PRE_COMMIT_TERRAFORM_VERSION` in the Dockerfile.
 4) `(aws-region))` - Your AWS region specified in your `AWS_DEFAULT_REGION` environment variable or cred file.
 5) `((aws-access-key-id))` - Your AWS access key specified in your `AWS_ACCESS_KEY_ID` environment variable or cred file.
 6) `((aws-secret-access-key))` - Your AWS region specified in your `AWS_SECRET_ACCESS_KEY` environment variable or cred file.
 
 Presuming you have `fly` (the CLI tool for interacting with Concourse) talking to your Concourse instance, run the following command:
 ```
-fly -t <target> set-pipeline -p <your-pipeline-name> -c pipeline.yml -v terraform-git-uri=<terraform-git-url> -v terraform-branch-name=<branch-name> -v pre-commit-repo-version=<pre-commit-release-version> -v aws-region=<aws-region> -v aws-access-key=<aws-access-key> -v aws-secret-access-key=<aws-secret-access-key>
+fly -t <target> set-pipeline -p <your-pipeline-name> -c pipeline.yml -v terraform-git-uri=<terraform-git-uri> -v terraform-branch-name=<branch-name> -v pre-commit-repo-version=<pre-commit-release-version> -v aws-region=<aws-region> -v aws-access-key-id=<aws-access-key-id> -v aws-secret-access-key=<aws-secret-access-key>
 ```
