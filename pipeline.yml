@@ -1,29 +1,29 @@
 ---
 resources:
-- name: ((terraform-defs-name))
+- name: terraform-repo
   type: git
   source:
     uri: ((terraform-git-uri))
     branch: ((terraform-branch-name))
 
-- name: ((git-hooks-name))
+- name: pre-commit-repo
   type: git
   source:
-    uri: ((hooks-git-uri))
-    branch: ((hooks-branch-name))
+    uri: https://github.com/antonbabenko/pre-commit-terraform.git
+    branch: master
 
 jobs:
 - name: static-checks
   plan:
-  - get: ((terraform-defs-name))
+  - get: terraform-repo
     trigger: true
-  - get: ((git-hooks-name))
+  - get: pre-commit-repo
     trigger: false
   - task: create-pre-commit-config
     config:
       platform: linux
       inputs:
-      - name: ((git-hooks-name))
+      - name: pre-commit-repo
       image_resource:
         type: registry-image
         source: { repository: alpine/git }
@@ -35,8 +35,8 @@ jobs:
           mkdir -p pre-commit-config && \
           cat <<EOF > pre-commit-config/.pre-commit-config.yaml
           repos:
-          - repo: ../((git-hooks-name))
-            rev: $(git --git-dir=((git-hooks-name))/.git rev-parse HEAD)
+          - repo: ../pre-commit-repo
+            rev: ((pre-commit-repo-version))
             hooks:
               - id: terraform_fmt
               - id: terraform_validate
@@ -49,8 +49,8 @@ jobs:
     config:
       platform: linux
       inputs:
-      - name: ((terraform-defs-name))
-      - name: ((git-hooks-name))
+      - name: terraform-repo
+      - name: pre-commit-repo
       - name: pre-commit-config
       image_resource:
         type: docker-image
@@ -59,64 +59,79 @@ jobs:
         AWS_DEFAULT_REGION: ((aws-region)) # Required for init of AWS provider config for terraform validate pre-commit hook
       run:
         path: sh
-        args: 
+        args:
         - -exc
         - |
-          cd ((terraform-defs-name)) && \
+          cd terraform-repo && \
           if [ -e .pre-commit-config.yaml ]
-          then 
+          then
             pre-commit run --all-files
           else
             pre-commit run -c ../pre-commit-config/.pre-commit-config.yaml --all-files
           fi
+  - task: static-security-checks
+    config:
+      platform: linux
+      inputs:
+      - name: terraform-repo
+      image_resource:
+        type: docker-image
+        source: {repository: dr364/terraform-testing, tag: 0.1.3}
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          cd terraform-repo && \
+          terrascan scan
 
 - name: tests
   plan:
-  - get: ((terraform-defs-name))
-    passed: 
+  - get: terraform-repo
+    passed:
     - static-checks
     trigger: true
   - task: run-unit-tests
     config:
       platform: linux
       inputs:
-      - name: ((terraform-defs-name))
+      - name: terraform-repo
       image_resource:
         type: docker-image
         source: {repository: dr364/terraform-testing, tag: 0.1.3}
       params:
         # Temporary keys should be generated for running this task
         AWS_DEFAULT_REGION: ((aws-region))
-        AWS_ACCESS_KEY_ID: ((aws-access-key))
+        AWS_ACCESS_KEY_ID: ((aws-access-key-id))
         AWS_SECRET_ACCESS_KEY: ((aws-secret-access-key))
       run:
         path: sh
         args:
         - -exc
         - |
-          cp -R ((terraform-defs-name)) $GOPATH/src && \
-          cd $GOPATH/src/((terraform-defs-name))/test && \
+          cp -R terraform-repo $GOPATH/src && \
+          cd $GOPATH/src/terraform-repo/test && \
           go mod init && \
           go test -v -tags=unit
   - task: run-integration-tests
     config:
       platform: linux
       inputs:
-      - name: ((terraform-defs-name))
+      - name: terraform-repo
       image_resource:
         type: docker-image
         source: {repository: dr364/terraform-testing, tag: 0.1.3}
       params:
         # Temporary keys should be generated for running this task
         AWS_DEFAULT_REGION: ((aws-region))
-        AWS_ACCESS_KEY_ID: ((aws-access-key))
+        AWS_ACCESS_KEY_ID: ((aws-access-key-id))
         AWS_SECRET_ACCESS_KEY: ((aws-secret-access-key))
       run:
         path: sh
         args:
         - -exc
         - |
-          cp -R ((terraform-defs-name)) $GOPATH/src && \
-          cd $GOPATH/src/((terraform-defs-name))/test && \
+          cp -R terraform-repo $GOPATH/src && \
+          cd $GOPATH/src/terraform-repo/test && \
           go mod init && \
           go test -v -tags=integration

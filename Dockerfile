@@ -8,7 +8,7 @@ ENV TERRATEST_VERSION v0.32.5
 ENV TESTIFY_VERSION v1.7.0
 # Terraform validate pre-commit hook requires the AWS_DEFAULT_REGION env var for initialising AWS cloud provider config
 # Without it then the validate command could fail because the AWS provider needs the region set
-ENV AWS_DEFAULT_REGION us-east-1 
+ENV AWS_DEFAULT_REGION us-east-1
 
 ENV TF_IN_AUTOMATION 1
 ENV GOPATH /opt/workdir
